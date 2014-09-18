@@ -10,7 +10,11 @@
 		http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch.xsd
 		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
 
-	<hadoop:configuration register-url-handler="false" properties-location="file:${xd.home}/config/hadoop.properties"/>
+	<hadoop:configuration register-url-handler="false" properties-location="file:${xd.home}/config/hadoop.properties">
+	
+		<!-- fs.default.name=webhdfs://localhost -->
+		fs.default.name=hdfs://pivhdsne:8020
+	</hadoop:configuration>
 	
 	<!-- Datasource for HAWQ -->
 	<bean id="dataSourceHawq" class="org.apache.commons.dbcp.BasicDataSource"
@@ -53,7 +57,7 @@
 		try {
 			fsh.put("${xd.home}/data/training.txt","/xd/training_stream/training.txt")
 		} catch(e) { }
-		
+
 		println fsh.ls("/xd/training_stream").toString()
 		println "Completed load script"
 	</hadoop:script>
@@ -65,7 +69,7 @@
 		template.execute(sql)
 		println "executed: " + sql
 	 	
-		sql1 = "CREATE EXTERNAL TABLE orders_training_pxf (customer_id int, order_id integer, order_amount numeric(10,2), store_id integer, num_items integer, is_fraudulent integer) LOCATION ('pxf://pivhdsne:50070/xd/training_stream/training.txt?Fragmenter=HdfsDataFragmenter&amp;Accessor=TextFileAccessor&amp;Resolver=TextResolver') FORMAT 'TEXT' (DELIMITER = '|');"
+		sql1 = "CREATE EXTERNAL TABLE orders_training_pxf (customer_id int, order_id integer, order_amount numeric(10,2), store_id integer, num_items integer, is_fraudulent integer) LOCATION ('pxf://pivhdsne:50070/xd/training_stream/training.txt?profile=HdfsTextSimple') FORMAT 'TEXT' (DELIMITER = '|');"
 		template.execute(sql1)
 		println "executed: " + sql1
 		
@@ -79,7 +83,7 @@
 		<hadoop:property name="template" ref="hawqTemplate" />
 		//run the analytic
 		
-		sql = "DROP TABLE IF EXISTS model; create table model as select * from madlib.logregr('regression_model','dep_var','features');"
+		sql = "DROP TABLE IF EXISTS model; DROP TABLE IF EXISTS model_summary;select madlib.logregr_train('regression_model','model','dep_var','features');"
 		template.execute(sql)
 		println "executed: " + sql
 		
