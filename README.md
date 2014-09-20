@@ -38,13 +38,8 @@ https://github.com/PivotalHD/pivotal-samples</li>
 
 http://projects.spring.io/spring-xd/</li>
 
-<<<<<<< HEAD
-<li>Update your spring-xd hadoop config ($SPRING_XD/conf/hadoop.properties) to reflect your hdfs address:
-=======
 <li>Update your spring-xd hadoop config ($SPRING_XD/xd/config/hadoop.properties) to reflect webhdfs:
->>>>>>> 4985ef63c23b7c2723e426e91d14f685bebacd48
-	
-fs.default.name=hdfs://my-hadoop:8020</li>
+<code>fs.default.name=hdfs://my-hadoop:8020</code></li>
 
 <li>Open config.py and add entries for each property. This is very important to ensure connectivity to Pivotal HD and SQLFire.</li>
 
