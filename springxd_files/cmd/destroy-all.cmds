@@ -4,8 +4,14 @@ stream destroy --name fraud_gauge_tap
 
 stream destroy --name order_gauge_tap
 
+stream destroy --name training_stream
+
 job destroy --name batchRetailArchive
 
 job destroy --name batchAnalytic 
 
 stream destroy --name order_stream
+
+rich-gauge delete --name fraud_order_gauge
+
+rich-gauge delete --name order_gauge

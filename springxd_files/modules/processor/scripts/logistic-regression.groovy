@@ -13,6 +13,7 @@ class LogisticRegression {
 
 	public float getScore (String orderAmount, String storeId, String numItems) {
 		updateModel()
+		//System.out.println("orderAmount:" + orderAmount + ", storeId:" + storeId + ", numItems:" + numItems)
 				
 		// Compute inner product of incoming transaction with coeff vector
 		float dotProd = 0.0f 
@@ -20,6 +21,7 @@ class LogisticRegression {
 		dotProd += coef[1] * Double.parseDouble(storeId) 
 		dotProd += coef[2] * Double.parseDouble(numItems) 
 		
+		//System.out.println("dotProd:" + dotProd)
 		// Apply the exponential 
 		return 1.0/(1.0 + Math.exp(-1.0 * dotProd)) // [0.5, 1.0) 
 	} 
@@ -28,6 +30,7 @@ class LogisticRegression {
 	public boolean execute(Object payload) { 
 		def jso = new JsonSlurper().parseText(payload) 
 		float score = getScore(jso.orderAmount, jso.storeId, jso.numItems) 
+		//System.out.println("score:" + score)
 		if (score >= threshold) { 
 			System.out.println("fraud score alert: " + score + "\n" + "customer id: " + jso.customerId)
 			return true

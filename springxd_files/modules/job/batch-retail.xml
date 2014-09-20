@@ -14,9 +14,7 @@
 		http://www.springframework.org/schema/integration/scripting http://www.springframework.org/schema/integration/scripting/spring-integration-scripting.xsd
 		http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc.xsd">
 
-    <hadoop:configuration register-url-handler="false" properties-location="file:${xd.home}/config/hadoop.properties">
-    	fs.default.name=hdfs://pivhdsne:8020
-	</hadoop:configuration>
+    <hadoop:configuration register-url-handler="false" properties-location="file:${xd.home}/config/hadoop.properties"/>
  	
  	<!-- Datasource for SQLFire -->
 	<bean id="dataSourceSqlFire" class="org.apache.commons.dbcp.BasicDataSource"
@@ -95,7 +93,7 @@
 	<hadoop:script id="hawqCreateScript" language="groovy">
 		<hadoop:property name="template" ref="hawqTemplate" />
 		try {
-			sql = """CREATE EXTERNAL TABLE realtime_orders_pxf (customer_id int, order_id integer, order_amount numeric(10,2), store_id integer, num_items integer) LOCATION ('pxf://pivhdsne:50070/xd/order_stream/order_stream-*.txt?profile=HdfsTextSimple') FORMAT 'TEXT' (DELIMITER = '|')"""
+			sql = """CREATE EXTERNAL TABLE realtime_orders_pxf (customer_id int, order_id integer, order_amount numeric(10,2), store_id integer, num_items integer) LOCATION ('pxf://pivhdsne:50070/xd/order_stream/order_stream-*.txt?profile=HdfsTextSimple') FORMAT 'TEXT' (DELIMITER = '|', null='null')"""
 			template.execute(sql)
 			println sql
 		

@@ -6,8 +6,8 @@ import commands
 hawq_setup_sql = """
 --Create external table for the HDFS realtime order data stream
 CREATE EXTERNAL TABLE realtime_orders_pxf (customer_id int, order_id integer, order_amount numeric(10,2), store_id integer, num_items integer) 
-LOCATION ('pxf://pivhdsne:50070/xd/order_stream/order_stream-*.txt?Fragmenter=HdfsDataFragmenter&Accessor=TextFileAccessor&Resolver=TextResolver') 
-FORMAT 'TEXT' (DELIMITER = '|'); 
+LOCATION ('pxf://pivhdsne:50070/xd/order_stream/order_stream-*.txt?profile=HdfsTextSimple') 
+FORMAT 'TEXT' (DELIMITER = '|', null='null'); 
 
 CREATE TABLE realtime_orders_hawq as select * from realtime_orders_pxf;
 """
@@ -15,8 +15,8 @@ CREATE TABLE realtime_orders_hawq as select * from realtime_orders_pxf;
 hawq_training_setup_sql = """
 --Create external table for the HDFS training order data stream
 CREATE EXTERNAL TABLE orders_training_pxf (customer_id int, order_id integer, order_amount numeric(10,2), store_id integer, num_items integer, is_fraudulent integer) 
-LOCATION ('pxf://pivhdsne:50070/xd/training_stream/training_stream-*.txt?Fragmenter=HdfsDataFragmenter&Accessor=TextFileAccessor&Resolver=TextResolver') 
-FORMAT 'TEXT' (DELIMITER = '|'); 
+LOCATION ('pxf://pivhdsne:50070/xd/training_stream/training*.txt?profile=HdfsTextSimple') 
+FORMAT 'TEXT' (DELIMITER = '|', null='null'); 
 
 DROP VIEW IF EXISTS regression_model CASCADE;
 CREATE VIEW regression_model AS
@@ -27,7 +27,8 @@ ARRAY[order_amount,store_id,num_items]::float8[] as features,
 is_fraudulent
 FROM orders_training_pxf;
 
-create table model as select * from madlib.logregr('regression_model','dep_var','features');
+select madlib.logregr_train('regression_model','model','dep_var','features');
+--create table model as select * from madlib.logregr('regression_model','dep_var','features');
 
 Select * from model;
 """
@@ -42,22 +43,21 @@ select * from realtime_orders_hawq order by order_amount asc, store_id asc limit
 
 hawq_teardown_sql = """
 --Cleanup SQL
-DROP TABLE realtime_orders_hawq; 
-DROP EXTERNAL TABLE realtime_orders_pxf;
-DROP EXTERNAL TABLE orders_training_pxf CASCADE;
-DROP TABLE model;
+DROP TABLE IF EXISTS realtime_orders_hawq; 
+DROP EXTERNAL TABLE IF EXISTS realtime_orders_pxf;
+DROP EXTERNAL TABLE IF EXISTS orders_training_pxf CASCADE;
+DROP TABLE IF EXISTS model;
+DROP TABLE IF EXISTS model_summary;
+
 """
 
 def setup_hdfs():
-  shellcmd('hdfs dfs -rm -r /xd')
+  shellcmd('hdfs dfs -rm -skipTrash -r /xd')
   shellcmd('hdfs dfs -mkdir /xd')
-  shellcmd('hdfs dfs -chown williamsj:gpadmin /xd')
   shellcmd('hdfs dfs -mkdir /xd/order_stream')
-  shellcmd('hdfs dfs -chown williamsj:gpadmin /xd/order_stream')
   shellcmd('hdfs dfs -mkdir /xd/order_stream_archive')
-  shellcmd('hdfs dfs -chown williamsj:gpadmin /xd/order_stream_archive')
   shellcmd('hdfs dfs -mkdir /xd/training_stream')
-  shellcmd('hdfs dfs -chown williamsj:gpadmin /xd/training_stream')
+  shellcmd('hdfs dfs -chmod -R 777 /xd')
   shellcmd('hdfs dfs -ls -R /xd')
   print "hadoop setup"
    
@@ -75,7 +75,7 @@ def train_analytic():
    
 def teardown_hawq():
    psql(hawq_teardown_sql)
-   shellcmd('hdfs dfs -rm -r /xd/order_stream/*')
+   shellcmd('hdfs dfs -rm -r -skipTrash /xd/order_stream/*.txt')
     
 def psql(sql):
     f = open("out.sql", "w")

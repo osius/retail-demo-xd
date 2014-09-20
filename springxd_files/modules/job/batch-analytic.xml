@@ -10,11 +10,7 @@
 		http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch.xsd
 		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
 
-	<hadoop:configuration register-url-handler="false" properties-location="file:${xd.home}/config/hadoop.properties">
-	
-		<!-- fs.default.name=webhdfs://localhost -->
-		fs.default.name=hdfs://pivhdsne:8020
-	</hadoop:configuration>
+	<hadoop:configuration register-url-handler="false" properties-location="file:${xd.home}/config/hadoop.properties"/>
 	
 	<!-- Datasource for HAWQ -->
 	<bean id="dataSourceHawq" class="org.apache.commons.dbcp.BasicDataSource"
@@ -54,6 +50,8 @@
 		script-ref="trainScript" scope="step" />
 
 	<hadoop:script id="loadScript" language="groovy">
+			fsh.rm("/xd/training_stream/training*.txt")
+		
 		try {
 			fsh.put("${xd.home}/data/training.txt","/xd/training_stream/training.txt")
 		} catch(e) { }
@@ -69,7 +67,7 @@
 		template.execute(sql)
 		println "executed: " + sql
 	 	
-		sql1 = "CREATE EXTERNAL TABLE orders_training_pxf (customer_id int, order_id integer, order_amount numeric(10,2), store_id integer, num_items integer, is_fraudulent integer) LOCATION ('pxf://pivhdsne:50070/xd/training_stream/training.txt?profile=HdfsTextSimple') FORMAT 'TEXT' (DELIMITER = '|');"
+		sql1 = "CREATE EXTERNAL TABLE orders_training_pxf (customer_id int, order_id integer, order_amount numeric(10,2), store_id integer, num_items integer, is_fraudulent integer) LOCATION ('pxf://pivhdsne:50070/xd/training_stream/training*.txt?profile=HdfsTextSimple') FORMAT 'TEXT' (DELIMITER = '|', null='null');"
 		template.execute(sql1)
 		println "executed: " + sql1
 		
