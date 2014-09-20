@@ -20,7 +20,7 @@
 	<bean id="dataSourceSqlFire" class="org.apache.commons.dbcp.BasicDataSource"
 		destroy-method="close">
 		<property name="driverClassName" value="com.vmware.sqlfire.jdbc.ClientDriver" />
-		<property name="url" value="jdbc:sqlfire://${memUrl:sqlfire}:7711" />
+		<property name="url" value="jdbc:sqlfire://${memUrl:pivhdsne}:1527" />
 		<property name="username" value="${username:gpadmin}" />
 		<property name="password" value="${password:password}" />
 	</bean>
@@ -93,7 +93,7 @@
 	<hadoop:script id="hawqCreateScript" language="groovy">
 		<hadoop:property name="template" ref="hawqTemplate" />
 		try {
-			sql = """CREATE EXTERNAL TABLE realtime_orders_pxf (customer_id int, order_id integer, order_amount numeric(10,2), store_id integer, num_items integer) LOCATION ('pxf://pivhdsne:50070/xd/order_stream/order_stream-*.txt?Fragmenter=HdfsDataFragmenter&amp;Accessor=TextFileAccessor&amp;Resolver=TextResolver') FORMAT 'TEXT' (DELIMITER = '|')"""
+			sql = """CREATE EXTERNAL TABLE realtime_orders_pxf (customer_id int, order_id integer, order_amount numeric(10,2), store_id integer, num_items integer) LOCATION ('pxf://pivhdsne:50070/xd/order_stream/order_stream-*.txt?profile=HdfsTextSimple') FORMAT 'TEXT' (DELIMITER = '|', null='null')"""
 			template.execute(sql)
 			println sql
 		
@@ -122,8 +122,11 @@
 		println sql
 	</hadoop:script>
 	<hadoop:script id="hdfsArchiveScript" language="groovy">
-		fsh.cp("/xd/order_stream/*","/xd/order_stream_archive")
-		fsh.rm("/xd/order_stream/*")
+		if (!fsh.test("/xd/order_stream_archive/")) {
+   			fsh.mkdir("/xd/order_stream_archive/");
+   		}
+		fsh.cp("/xd/order_stream/*.txt","/xd/order_stream_archive/")
+		fsh.rm("/xd/order_stream/*.txt")
 		
 		println "hdfs live:" + fsh.ls("/xd/order_stream").toString()
 		println "hdfs archive:" + fsh.ls("/xd/order_stream_archive").toString()

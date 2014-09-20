@@ -49,18 +49,44 @@ http://projects.spring.io/spring-xd/</li>
 <li>Run 3 Spring XD runtimes in terminal windows(redis, admin, container)
   <br/><code>sudo sysctl -w net.inet.tcp.msl=1000<br/>
             $SPRING_XD/redis/bin/redis-server<br/>
-            $SPRING_XD/xd/bin/xd-admin --hadoopDistro phd1<br/>
-            $SPRING_XD/xd/bin/xd-container --hadoopDistro phd1</code>
+            $SPRING_XD/xd/bin/xd-admin --hadoopDistro phd20<br/>
+            $SPRING_XD/xd/bin/xd-container --hadoopDistro phd20</code>
+  <br/>Alternative use the xd-singelnode with redis for analytics
+  <br/><code>$SPRING_XD/redis/bin/redis-server<br/>
+             $SPRING_XD/xd/bin/xd-singlenode --analytics redis --hadoopDistro phd20</code>
 </li>
-<li>Run Spring XD Shell in a terminal window 
- 
-<br/><code>$SPRING_XD/shell/bin/spring-xd-shell --hadoopDistro phd1</code>
+
+<li>Run Spring XD Shell in a terminal window  
+<br/><code>$SPRING_XD/shell/bin/spring-xd-shell</code>
 </li>
 <li>In Spring XD Shell - Create Hadoop ingest, Pivotal HD analytics tap and SQLFire sink.
-<code>script --file ../../xd/cmd/create-all.cmds</code></li>
+<br/><code>script --file ../../xd/cmd/create-all.cmds</code></li>
 
 <li>[PIVOTALHD TERMINAL] Open an ssh session to your Pivotal VM and run this script. You must do this before starting the data stream.
    <br/><code>./demo.py setup_hdfs</code>
+</li>
+
+<li>In Spring XD Shell - deploy the "training_stream" stream 
+	<br/><code>stream deploy --name training_stream</code> 
+</li>
+
+<li>In a terminal window, run send_data.py to start a data stream simulation.
+   <br/><code>./build_training_data.py</code>
+</li>
+
+<li>[PIVOTALHD TERMINAL] create the external "orders_training_pxf" table in hawq
+	<br/><code>./demo.py train_analytic</code>
+</li>
+
+<li>In Spring XD Shell - deploy the "order_stream" stream and the taps
+	<br/><code>stream deploy --name order_stream
+	<br/>stream deploy --name fraud_tap
+	<br/>stream deploy --name fraud_gauge_tap
+	<br/>stream deploy --name order_gauge_tap</code>
+</li>
+
+<li>[SQLFIRE TERMINAL] Setup the tables in gemfire-xd
+	<br/><code>./demo.py setup</code>
 </li>
 
 <li>In a terminal window, run send_data.py to start a data stream simulation.
@@ -68,11 +94,17 @@ http://projects.spring.io/spring-xd/</li>
 </li>
 
 <li>[SQLFIRE TERMINAL] Verify that SQLFire is getting only a small subset of orders
-<br/><code>./demo.py query</code>
+	<br/><code>./demo.py query_hawq</code>
+</li>
+
+<li>In Spring XD Shell - take a look a the gauges 
+	<br/><code>rich-gauge display --name fraud_order_gauge</code>
+	<br/><code>rich-gauge display --name order_gauge</code> 
 </li>
 
 <li>In Spring XD Shell - Re-run batch jobs(should delete SQLFire data, populate HAWQ tables, and re-run analytic training model)
-<br/><code>script --file ../../xd/cmd/deploy-batch.cmds</code></li>
+	<br/><code>script --file ../../xd/cmd/deploy-batch.cmds</code>
+</li>
 
 <li>In Spring XD Shell - Reset the richgauge taps to 0)
 <br/><code>script --file ../../xd/cmd/reset-taps.cmds</code></li>
@@ -80,6 +112,15 @@ http://projects.spring.io/spring-xd/</li>
 <li>[PIVOTALHD_TERMINAL] Run a PXF and HAWQ Query
    <br/><code>./demo.py query_hawq</code>
 </li>
+
+<li>In a terminal window, run send_data.py to start a data stream simulation.
+   <br/><code>./send_data.py</code>
+</li>
+
+<li>[PIVOTALHD_TERMINAL] Run a PXF and HAWQ Query
+   <br/><code>./demo.py query_hawq</code>
+</li>
+
 
 <li>Install DB Visualizer and run queries through a JDBC client GUI. http://www.dbvis.com/.
 You will need to add a new "Cache" Driver JAR for SQLFire. You will need to modify '/data/1/hawq_master/gpseg-1/pg_hba.conf' in your Pivotal HD VM to remote connect.

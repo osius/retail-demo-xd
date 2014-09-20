@@ -1,12 +1,13 @@
-stream create --definition "http --port=8000 | filter --expression=!payload.contains("BAD_DATA") | transform --script=order-transformer.groovy | hdfs --rollover=51200 --suffix=txt" --name order_stream
+stream create --definition "http --port=8001 | filter --expression=!payload.contains('BAD_DATA') | transform --script=order-transformer-training.groovy | hdfs --rollover=51200 --fileExtension=txt" --name training_stream --deploy
 
-stream create --definition "tap:stream:order_stream.filter > regression-analytic --threshold=0.90 | jdbc --columns='customer_id,order_id,order_amount,store_id,num_items' --tablename='realtime_orders'" --name fraud_tap
+stream create --definition "http --port=8000 | filter --expression=!payload.contains('BAD_DATA') | transform --script=order-transformer.groovy | hdfs --rollover=51200 --fileExtension=txt" --name order_stream --deploy
 
-stream create --definition "tap:stream:order_stream.filter > regression-analytic --threshold=0.90 | json-field-extractor --fieldName=orderAmount | richgauge --name=fraud_order_gauge" --name fraud_gauge_tap
+stream create --definition "tap:stream:order_stream.filter > regression-analytic --threshold=0.90 | jdbc  --driverClassName=com.pivotal.gemfirexd.jdbc.ClientDriver --url=jdbc:gemfirexd://pivhdsne:1527 --username=app --password=app --columns='customer_id,order_id,order_amount,store_id,num_items' --tableName='realtime_orders'" --name fraud_tap --deploy
 
-stream create --definition "tap:stream:order_stream.filter > json-field-extractor --fieldName=orderAmount | richgauge --name=order_gauge" --name order_gauge_tap
+stream create --definition "tap:stream:order_stream.filter > regression-analytic --threshold=0.90 | splitter --expression=#jsonPath(payload,'$.orderAmount') | rich-gauge --name=fraud_order_gauge" --name fraud_gauge_tap --deploy
 
-job create --name batchAnalytic --definition "batch-analytic"
-job launch batchAnalytic
+stream create --definition "tap:stream:order_stream.filter >  splitter --expression=#jsonPath(payload,'$.orderAmount') | rich-gauge --name=order_gauge" --name order_gauge_tap --deploy
 
-job create --name batchRetailArchive --definition "batch-retail"
+job create --name batchAnalytic --definition "batch-analytic" --deploy
+
+job create --name batchRetailArchive --definition "batch-retail" --deploy
